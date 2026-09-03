@@ -1,0 +1,11 @@
+services:
+  distripro-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: distripro_production_app
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production

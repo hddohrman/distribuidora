@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#00236f"/>
+  <circle cx="256" cy="256" r="180" fill="#001850"/>
+  <!-- Truck & Box Icon -->
+  <g fill="#82f5c1">
+    <path d="M128 320c-17.7 0-32-14.3-32-32V192c0-17.7 14.3-32 32-32h160c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32H128z" opacity="0.9"/>
+    <path d="M320 208h48l48 48v32c0 17.7-14.3 32-32 32h-64v-112z"/>
+    <circle cx="176" cy="336" r="32" fill="#ffffff"/>
+    <circle cx="176" cy="336" r="16" fill="#00236f"/>
+    <circle cx="352" cy="336" r="32" fill="#ffffff"/>
+    <circle cx="352" cy="336" r="16" fill="#00236f"/>
+  </g>
+  <!-- Accent checkmark / tag -->
+  <path d="M210 240l30 30 60-60" stroke="#00236f" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

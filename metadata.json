@@ -1,0 +1,6 @@
+{
+  "name": "DistriPro - Pedidos Preventa",
+  "description": "Sistema móvil de preventa, venta in situ al paso, cobranzas y sincronización offline por WhatsApp para logística y distribución mayorista.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

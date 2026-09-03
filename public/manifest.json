@@ -1,0 +1,19 @@
+{
+  "name": "DistriPro - Pedidos y Preventa",
+  "short_name": "DistriPro",
+  "description": "Sistema móvil de preventa, cobranzas y autogestión de pedidos mayoristas con sincronización por WhatsApp.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#00236f",
+  "theme_color": "#00236f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "shopping"]
+}
