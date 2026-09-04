@@ -2,7 +2,7 @@ export type PaymentMethod = 'efectivo' | 'cta_cte' | 'qr' | 'transferencia';
 
 export type GeofenceStatus = 'in_range' | 'nearby' | 'out_of_range';
 
-export type TabType = 'pedidos' | 'catalogo' | 'clientes' | 'saldos' | 'sync' | 'admin';
+export type TabType = 'pedidos' | 'catalogo' | 'clientes' | 'saldos' | 'sync' | 'admin' | 'opciones';
 
 export type UserRole = 'vendedor' | 'cliente' | 'admin';
 
@@ -62,17 +62,21 @@ export interface ComboItem {
 }
 
 export interface CompanySettings {
-  companyName: string; // Razón Social o Nombre Comercial
+  companyName: string; // Razón Social o Nombre Comercial de la empresa (DistriPro es el software)
+  logoUrl?: string; // URL o Data URL base64 del logo de la empresa para tickets y comprobantes
   cuit: string;
   address: string;
   city: string;
   headquartersWhatsApp: string; // WhatsApp principal de Casa Central donde se reciben pedidos
   phoneSecondary?: string;
   email?: string;
+  emailContact?: string;
   businessHours?: string;
   cashDiscountPercent: number; // % de descuento por pago en efectivo
   bankInfo: BankInfo;
   ticketFooterNotes?: string;
+  receiptFooterNotes?: string;
+  priceListSheetUrl?: string;
 }
 
 export interface Product {

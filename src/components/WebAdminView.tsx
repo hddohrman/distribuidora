@@ -21,6 +21,7 @@ import { DifusionWhatsAppTab } from './DifusionWhatsAppTab';
 import { ComprasProveedoresTab } from './ComprasProveedoresTab';
 import { GastosCostosTab } from './GastosCostosTab';
 import { ConfigOpcionesTab } from './ConfigOpcionesTab';
+import { OpcionesView } from './OpcionesView';
 import {
   ShoppingCart,
   Receipt,
@@ -1065,8 +1066,22 @@ export const WebAdminView: React.FC<WebAdminViewProps> = ({
             </div>
           </div>
 
-          {/* Quick Access to Mobile App */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* Top Quick Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('config')}
+              className={`h-9 px-3 sm:px-3.5 text-[12px] font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 ${
+                activeTab === 'config'
+                  ? 'bg-white text-[#00236f] shadow-md ring-2 ring-[#82f5c1]'
+                  : 'bg-[#13327a] hover:bg-[#1e44a0] text-white border border-white/20'
+              }`}
+              title="Abrir Pantalla de Opciones y Configuración de Empresa (Logo, CUIT, WhatsApp, Políticas)"
+            >
+              <LocalIcon name="settings" className="w-4 h-4 text-[#82f5c1]" />
+              <span>Opciones Empresa</span>
+            </button>
+
             <button
               type="button"
               onClick={onOpenMobileApp}
@@ -2388,102 +2403,54 @@ export const WebAdminView: React.FC<WebAdminViewProps> = ({
         )}
 
         {/* ============================================================== */}
-        {/* TAB 5: CONFIGURACIÓN COMERCIAL & SYNC MÓVIL                    */}
+        {/* TAB 5: OPCIONES & CONFIGURACIÓN DE EMPRESA & SYNC MÓVIL       */}
         {/* ============================================================== */}
         {activeTab === 'config' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="bg-white p-5 rounded-2xl shadow-xs border border-[#e2e8f0]">
-              <h1 className="font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[20px] text-[#00236f]">
-                Parámetros Comerciales y Sincronización con Preventistas
-              </h1>
-              <p className="text-[13px] text-[#64748b] mt-0.5">
-                Define políticas de descuento por contado, cuentas bancarias para transferencias e importa los lotes .dist recibidos por WhatsApp.
-              </p>
-            </div>
+            {/* Opciones y Configuración Completa de Empresa */}
+            <OpcionesView
+              settings={
+                companySettings || {
+                  companyName: 'Distribuidora Mayorista S.A.',
+                  headquartersWhatsApp: '+54 9 387 512-3456',
+                  cashDiscountPercent: cashDiscountPercent,
+                  cuit: '30-71234567-8',
+                  address: 'Av. San Martín 2340, Parque Industrial',
+                  city: 'Salta Capital, Salta',
+                  bankInfo: bankInfo,
+                  receiptFooterNotes:
+                    'Comprobante comercial no válido como factura. Gracias por confiar en nosotros.',
+                }
+              }
+              onSaveSettings={(newSettings) => {
+                if (onUpdateCompanySettings) {
+                  onUpdateCompanySettings(newSettings);
+                }
+                onUpdateCashDiscount(newSettings.cashDiscountPercent);
+                onUpdateBankInfo(newSettings.bankInfo);
+                onTriggerToast(
+                  'Opciones Guardadas',
+                  `Datos, logo y políticas de ${newSettings.companyName} actualizados correctamente.`
+                );
+              }}
+              onBack={() => setActiveTab('dashboard')}
+            />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Commercial Policies & Bank Details */}
-              <div className="bg-white p-5 rounded-2xl shadow-xs border border-[#e2e8f0] space-y-4">
-                <h3 className="font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[16px] text-[#00236f] flex items-center gap-2">
-                  <LocalIcon name="settings" className="w-5 h-5 text-[#00236f]" />
-                  <span>Políticas de Cobro y Cuentas Bancarias</span>
-                </h3>
-
-                {/* Cash discount */}
-                <div className="space-y-1.5">
-                  <label className="text-[13px] font-semibold text-[#0b1c30]">
-                    Descuento por Pago Contado Efectivo (%):
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max="40"
-                      value={cashDiscountPercent}
-                      onChange={(e) => onUpdateCashDiscount(Number(e.target.value))}
-                      className="w-28 h-9 px-3 rounded-lg border border-[#cbd5e1] font-mono text-[14px] font-bold text-[#00236f] bg-[#f8f9ff]"
-                    />
-                    <span className="text-[12px] text-[#64748b]">
-                      Se aplica automáticamente en tickets y pedidos in situ.
-                    </span>
-                  </div>
-                </div>
-
-                {/* Bank details */}
-                <div className="space-y-3 pt-3 border-t border-[#f1f5f9] text-[13px]">
-                  <div className="space-y-1">
-                    <label className="font-semibold text-[#0b1c30]">Alias Bancario Oficial:</label>
-                    <input
-                      type="text"
-                      value={bankInfo.alias}
-                      onChange={(e) => onUpdateBankInfo({ ...bankInfo, alias: e.target.value })}
-                      className="w-full h-9 px-3 rounded-lg border border-[#cbd5e1] font-mono font-bold bg-[#f8f9ff]"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-semibold text-[#0b1c30]">CBU (22 dígitos):</label>
-                    <input
-                      type="text"
-                      value={bankInfo.cbu}
-                      onChange={(e) => onUpdateBankInfo({ ...bankInfo, cbu: e.target.value })}
-                      className="w-full h-9 px-3 rounded-lg border border-[#cbd5e1] font-mono bg-[#f8f9ff]"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="font-semibold text-[#0b1c30]">Banco:</label>
-                      <input
-                        type="text"
-                        value={bankInfo.bankName}
-                        onChange={(e) => onUpdateBankInfo({ ...bankInfo, bankName: e.target.value })}
-                        className="w-full h-9 px-3 rounded-lg border border-[#cbd5e1] bg-[#f8f9ff]"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-semibold text-[#0b1c30]">CUIT:</label>
-                      <input
-                        type="text"
-                        value={bankInfo.cuit}
-                        onChange={(e) => onUpdateBankInfo({ ...bankInfo, cuit: e.target.value })}
-                        className="w-full h-9 px-3 rounded-lg border border-[#cbd5e1] font-mono bg-[#f8f9ff]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-semibold text-[#0b1c30]">Titular / Razón Social:</label>
-                    <input
-                      type="text"
-                      value={bankInfo.accountHolder}
-                      onChange={(e) => onUpdateBankInfo({ ...bankInfo, accountHolder: e.target.value })}
-                      className="w-full h-9 px-3 rounded-lg border border-[#cbd5e1] bg-[#f8f9ff]"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-2">
+            {/* Sincronización de Archivos .dist con Preventistas */}
+            <div className="bg-white p-5 rounded-2xl shadow-xs border border-[#e2e8f0] space-y-4">
+              <h2 className="font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[17px] text-[#00236f] flex items-center gap-2">
+                <LocalIcon name="sync" className="w-5 h-5 text-emerald-600" />
+                <span>Sincronización de Lotes .dist con Preventistas de Calle</span>
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                  <h3 className="font-bold text-[14px] text-slate-800 flex items-center gap-2">
+                    <LocalIcon name="download" className="w-4 h-4 text-[#00236f]" />
+                    <span>Exportar Catálogo Central para Móviles</span>
+                  </h3>
+                  <p className="text-[12px] text-[#64748b]">
+                    Genera el archivo .dist para enviar por WhatsApp a los preventistas y que actualicen sus celulares.
+                  </p>
                   <button
                     type="button"
                     onClick={handleDownloadFullCatalogJson}
@@ -2493,39 +2460,36 @@ export const WebAdminView: React.FC<WebAdminViewProps> = ({
                     <span>Generar Archivo .dist para Sincronizar Móviles</span>
                   </button>
                 </div>
-              </div>
 
-              {/* Import Batches from Street Vendors */}
-              <div className="bg-white p-5 rounded-2xl shadow-xs border border-[#e2e8f0] space-y-4">
-                <h3 className="font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[16px] text-[#00236f] flex items-center gap-2">
-                  <LocalIcon name="cloud_sync" className="w-5 h-5 text-emerald-600" />
-                  <span>Recepción de Lotes .dist de Preventistas</span>
-                </h3>
-                <p className="text-[12px] text-[#64748b]">
-                  Pega aquí el contenido del archivo .dist enviado por WhatsApp por los vendedores para consolidar las ventas y cobranzas del día:
-                </p>
-
-                <textarea
-                  rows={8}
-                  value={importJsonText}
-                  onChange={(e) => setImportJsonText(e.target.value)}
-                  placeholder="Pegar el JSON o contenido del lote .dist aquí..."
-                  className="w-full p-3 rounded-xl border border-[#cbd5e1] font-mono text-[11px] bg-[#f8f9ff] focus:outline-none focus:ring-2 focus:ring-[#00236f]"
-                />
-
-                <button
-                  type="button"
-                  onClick={handleImportJsonBatch}
-                  disabled={!importJsonText.trim()}
-                  className={`w-full h-10 rounded-lg font-bold text-[13px] flex items-center justify-center gap-2 transition-all ${
-                    importJsonText.trim()
-                      ? 'bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer'
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  }`}
-                >
-                  <LocalIcon name="task_alt" className="w-4 h-4" />
-                  <span>Procesar e Incorporar al Dashboard</span>
-                </button>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                  <h3 className="font-bold text-[14px] text-slate-800 flex items-center gap-2">
+                    <LocalIcon name="cloud_sync" className="w-4 h-4 text-emerald-600" />
+                    <span>Recepción de Lotes .dist de Preventistas</span>
+                  </h3>
+                  <p className="text-[12px] text-[#64748b]">
+                    Pega aquí el contenido del lote .dist enviado por los vendedores para consolidar ventas y cobranzas:
+                  </p>
+                  <textarea
+                    rows={4}
+                    value={importJsonText}
+                    onChange={(e) => setImportJsonText(e.target.value)}
+                    placeholder="Pegar contenido del archivo .dist aquí..."
+                    className="w-full p-2.5 rounded-lg border border-[#cbd5e1] font-mono text-[11px] bg-white focus:outline-none focus:ring-2 focus:ring-[#00236f]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleImportJsonBatch}
+                    disabled={!importJsonText.trim()}
+                    className={`w-full h-10 rounded-lg font-bold text-[13px] flex items-center justify-center gap-2 transition-all ${
+                      importJsonText.trim()
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer'
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <LocalIcon name="task_alt" className="w-4 h-4" />
+                    <span>Procesar e Incorporar al Dashboard</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -2625,17 +2589,6 @@ export const WebAdminView: React.FC<WebAdminViewProps> = ({
           <GastosCostosTab
             expenses={effectiveExpenses}
             onUpdateExpenses={handleUpdateExpenses}
-            onTriggerToast={onTriggerToast}
-          />
-        )}
-
-        {/* ============================================================== */}
-        {/* TAB: OPCIONES Y CONFIGURACIÓN GENERAL                          */}
-        {/* ============================================================== */}
-        {activeTab === 'config' && (
-          <ConfigOpcionesTab
-            companySettings={effectiveCompanySettings}
-            onUpdateSettings={handleUpdateCompanySettings}
             onTriggerToast={onTriggerToast}
           />
         )}

@@ -19,21 +19,56 @@ import {
 } from 'lucide-react';
 
 interface ConfigOpcionesTabProps {
-  settings: CompanySettings;
-  onUpdateSettings: (newSettings: CompanySettings) => void;
-  products: Product[];
-  onUpdateProducts: (products: Product[]) => void;
+  settings?: CompanySettings;
+  companySettings?: CompanySettings;
+  onUpdateSettings?: (newSettings: CompanySettings) => void;
+  products?: Product[];
+  onUpdateProducts?: (products: Product[]) => void;
   onTriggerToast: (title: string, message: string) => void;
 }
 
 export const ConfigOpcionesTab: React.FC<ConfigOpcionesTabProps> = ({
   settings,
+  companySettings,
   onUpdateSettings,
-  products,
+  products = [],
   onUpdateProducts,
   onTriggerToast,
 }) => {
-  const [formData, setFormData] = useState<CompanySettings>(settings);
+  const initialSettings: CompanySettings = settings || companySettings || {
+    companyName: 'Distribuidora Mayorista S.A.',
+    headquartersWhatsApp: '+54 9 387 512-3456',
+    cashDiscountPercent: 10,
+    cuit: '30-71234567-8',
+    address: 'Av. San Martín 2340, Parque Industrial',
+    city: 'Salta Capital, Salta',
+    bankInfo: {
+      alias: 'DISTRI.PAGOS',
+      cbu: '0000003100012345678901',
+      bankName: 'Banco Macro Salta',
+      accountHolder: 'Distribuidora Mayorista S.A.',
+      cuit: '30-71234567-8',
+    },
+    receiptFooterNotes: 'Comprobante comercial no válido como factura. Gracias por confiar en nosotros.',
+  };
+
+  const [formData, setFormData] = useState<CompanySettings>({
+    ...initialSettings,
+    companyName: initialSettings?.companyName || 'Distribuidora Mayorista S.A.',
+    headquartersWhatsApp: initialSettings?.headquartersWhatsApp || '+54 9 387 512-3456',
+    cashDiscountPercent: initialSettings?.cashDiscountPercent ?? 10,
+    cuit: initialSettings?.cuit || '30-71234567-8',
+    address: initialSettings?.address || 'Av. San Martín 2340, Parque Industrial',
+    city: initialSettings?.city || 'Salta Capital, Salta',
+    bankInfo: initialSettings?.bankInfo || {
+      alias: 'DISTRI.PAGOS',
+      cbu: '0000003100012345678901',
+      bankName: 'Banco Macro Salta',
+      accountHolder: 'Distribuidora Mayorista S.A.',
+      cuit: '30-71234567-8',
+    },
+    receiptFooterNotes: initialSettings?.receiptFooterNotes || 'Comprobante comercial no válido como factura.',
+  });
   const [showSheetPreview, setShowSheetPreview] = useState(false);
   const [sheetSearch, setSheetSearch] = useState('');
 
@@ -45,22 +80,24 @@ export const ConfigOpcionesTab: React.FC<ConfigOpcionesTabProps> = ({
     setFormData((prev) => ({
       ...prev,
       bankInfo: {
-        ...prev.bankInfo,
+        ...(prev?.bankInfo || {}),
         [key]: value,
-      },
+      } as BankInfo,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateSettings(formData);
+    if (onUpdateSettings) {
+      onUpdateSettings(formData);
+    }
     onTriggerToast('Configuración Guardada', 'Los parámetros de Casa Central fueron actualizados exitosamente.');
   };
 
   const handleTestWhatsApp = () => {
-    const cleanPhone = formData.headquartersWhatsApp.replace(/[^0-9]/g, '');
+    const cleanPhone = (formData?.headquartersWhatsApp || '+54 9 387 512-3456').replace(/[^0-9]/g, '');
     const message = encodeURIComponent(
-      `*DISTRIPRO CASA CENTRAL - MENSAJE DE PRUEBA*\n\nEste es un mensaje de verificación para la línea principal de recepción de pedidos (${formData.companyName}).`
+      `*DISTRIPRO CASA CENTRAL - MENSAJE DE PRUEBA*\n\nEste es un mensaje de verificación para la línea principal de recepción de pedidos (${formData?.companyName || 'Distribuidora'}).`
     );
     window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
   };

@@ -46,12 +46,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       icon: 'sync_saved_locally',
       badge: pendingCount > 0 ? pendingCount : null,
     },
+    {
+      id: 'opciones' as TabType,
+      label: 'Opciones',
+      icon: 'settings',
+    },
   ];
 
   const clientNavItems = [
     {
       id: 'catalogo' as TabType,
-      label: 'Catálogo & Pedido',
+      label: 'Catálogo',
       icon: 'inventory_2',
       badge: clientBasketCount > 0 ? clientBasketCount : null,
     },
@@ -62,8 +67,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'sync' as TabType,
-      label: 'Catálogo WhatsApp',
+      label: 'Sync WhatsApp',
       icon: 'cloud_sync',
+    },
+    {
+      id: 'opciones' as TabType,
+      label: 'Opciones',
+      icon: 'settings',
     },
   ];
 

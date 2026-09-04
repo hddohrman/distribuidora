@@ -10,6 +10,7 @@ interface ProfileModalProps {
   onSwitchRole: () => void;
   onOpenManualTecnico?: () => void;
   onOpenWebAdmin?: () => void;
+  onOpenOpciones?: () => void;
 }
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -20,6 +21,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onSwitchRole,
   onOpenManualTecnico,
   onOpenWebAdmin,
+  onOpenOpciones,
 }) => {
   if (!isOpen) return null;
 
@@ -160,13 +162,27 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </button>
             )}
 
+            {onOpenOpciones && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenOpciones();
+                }}
+                className="w-full h-10 bg-[#00236f] hover:bg-[#1e3a8a] text-white text-[13px] font-bold rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
+              >
+                <LocalIcon name="settings" className="w-4.5 h-4.5 text-[#82f5c1]" />
+                <span>Opciones & Configuración de la Empresa</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {
                 onClose();
                 onSwitchRole();
               }}
-              className="w-full h-10 bg-[#00236f] hover:bg-[#1e3a8a] text-white text-[13px] font-bold rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all"
+              className="w-full h-10 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[13px] font-bold rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all"
             >
               <LocalIcon name="swap_horiz" className="w-4.5 h-4.5" />
               <span>Cambiar Perfil / Iniciar Sesión</span>

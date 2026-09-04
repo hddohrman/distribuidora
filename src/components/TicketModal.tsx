@@ -1,17 +1,19 @@
 import React from 'react';
-import { Order } from '../types';
+import { Order, CompanySettings } from '../types';
 import { LocalIcon } from './LocalIcon';
 
 interface TicketModalProps {
   order: Order | null;
   onClose: () => void;
   onSendWhatsApp: (order: Order) => void;
+  companySettings?: CompanySettings;
 }
 
 export const TicketModal: React.FC<TicketModalProps> = ({
   order,
   onClose,
   onSendWhatsApp,
+  companySettings,
 }) => {
   if (!order) return null;
 
@@ -48,7 +50,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-white/80 hover:text-white"
+            className="text-white/80 hover:text-white cursor-pointer"
           >
             <LocalIcon name="close" className="w-5 h-5" />
           </button>
@@ -56,20 +58,32 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
         {/* Ticket Content (Thermal Printer Look) */}
         <div className="p-4 bg-[#fffefc] text-[#0b1c30] text-[12px] font-mono border-b border-dashed border-[#c5c5d3] space-y-3">
-          {/* Header */}
+          {/* Header con Identidad de la Empresa y Logo */}
           <div className="text-center space-y-0.5">
-            <h2 className="font-sans font-black text-[18px] text-[#00236f] tracking-tight">
-              DISTRIPRO S.A.
+            {companySettings?.logoUrl && (
+              <div className="mb-1.5 flex justify-center">
+                <img
+                  src={companySettings.logoUrl}
+                  alt={companySettings.companyName}
+                  className="h-12 max-w-[160px] object-contain"
+                />
+              </div>
+            )}
+            <h2 className="font-sans font-black text-[17px] text-[#00236f] tracking-tight leading-tight">
+              {(companySettings?.companyName || 'DISTRIPRO S.A.').toUpperCase()}
             </h2>
             <p className="text-[10px] text-[#444651]">
-              Distribuidora Mayorista de Consumo Masivo
+              CUIT: {companySettings?.cuit || '30-71829341-8'} • IVA Responsable Inscripto
             </p>
             <p className="text-[10px] text-[#444651]">
-              CUIT: 30-71829341-8 • IVA Responsable Inscripto
+              {companySettings?.address || 'Casa Central: Parque Industrial Oeste'}
+              {companySettings?.city ? ` • ${companySettings.city}` : ''}
             </p>
-            <p className="text-[10px] text-[#444651]">
-              Casa Central: Parque Industrial Oeste - Nave 4
-            </p>
+            {companySettings?.headquartersWhatsApp && (
+              <p className="text-[10px] text-[#006c4a] font-bold">
+                WhatsApp Pedidos: {companySettings.headquartersWhatsApp}
+              </p>
+            )}
           </div>
 
           <div className="border-t border-dashed border-[#c5c5d3] pt-2 space-y-1 text-[11px]">
@@ -179,6 +193,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             <span className="text-[10px] text-[#757682] tracking-widest mt-0.5">
               *{order.orderNumber.replace('#', '')}*
             </span>
+          </div>
+
+          {companySettings?.ticketFooterNotes && (
+            <div className="pt-2 text-center text-[10px] text-[#444651] border-t border-dashed border-[#c5c5d3] italic">
+              {companySettings.ticketFooterNotes}
+            </div>
+          )}
+
+          <div className="text-[9px] text-[#757682] text-center pt-1 border-t border-dashed border-[#c5c5d3]">
+            Emisión digital por sistema DistriPro
           </div>
         </div>
 

@@ -125,10 +125,10 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto overflow-x-hidden">
       <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 my-auto max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="bg-[#00236f] text-white p-3.5 flex items-center justify-between">
+        <div className="bg-[#00236f] text-white p-3.5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <LocalIcon name="add_shopping_cart" className="w-5.5 h-5.5 text-[#82f5c1]" />
             <span className="font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[15px]">
@@ -138,14 +138,14 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-white/80 hover:text-white"
+            className="text-white/80 hover:text-white cursor-pointer"
           >
             <LocalIcon name="close" className="w-5 h-5" />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} noValidate className="p-4 space-y-3.5 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} noValidate className="p-3.5 sm:p-4 space-y-3 overflow-y-auto overflow-x-hidden flex-1">
           {/* 1. Client selection */}
           <div>
             <label className="block text-[11px] font-semibold text-[#444651] mb-1">
@@ -157,7 +157,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 const found = clients.find((c) => c.id === e.target.value);
                 if (found) setSelectedClient(found);
               }}
-              className="w-full h-10 px-3 bg-[#eff4ff] border border-[#dce9ff] rounded-lg text-[13px] font-semibold text-[#0b1c30] focus:ring-2 focus:ring-[#00236f] focus:outline-none"
+              className="w-full h-10 px-3 bg-[#eff4ff] border border-[#dce9ff] rounded-lg text-[13px] font-semibold text-[#0b1c30] focus:ring-2 focus:ring-[#00236f] focus:outline-none truncate"
             >
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -176,64 +176,91 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSaleType('in_situ')}
-                className={`h-10 rounded-lg text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                className={`h-10 rounded-lg text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   saleType === 'in_situ'
                     ? 'bg-[#00236f] text-white shadow-xs'
                     : 'bg-[#eff4ff] text-[#0b1c30]'
                 }`}
               >
                 <LocalIcon name="point_of_sale" className="w-4 h-4" />
-                <span>Venta In Situ (Furgón)</span>
+                <span className="truncate">Venta In Situ (Furgón)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSaleType('preventa')}
-                className={`h-10 rounded-lg text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+                className={`h-10 rounded-lg text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   saleType === 'preventa'
                     ? 'bg-[#00236f] text-white shadow-xs'
                     : 'bg-[#eff4ff] text-[#0b1c30]'
                 }`}
               >
                 <LocalIcon name="calendar_today" className="w-4 h-4" />
-                <span>Preventa (Mañana)</span>
+                <span className="truncate">Preventa (Mañana)</span>
               </button>
             </div>
           </div>
 
-          {/* 3. Product Selector and Add */}
-          <div className="bg-[#f8f9ff] p-3 rounded-xl border border-[#e5eeff] space-y-2">
-            <span className="text-[11px] font-bold text-[#00236f] uppercase tracking-wider block">
-              Agregar Productos al Pedido
-            </span>
+          {/* 3. Product Selector and Add (Stacked for 100% visibility on mobile) */}
+          <div className="bg-[#f8f9ff] p-3 rounded-xl border border-[#dce9ff] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#00236f] uppercase tracking-wider block">
+                Agregar Productos al Pedido
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium">
+                {products.length} productos
+              </span>
+            </div>
 
-            <div className="flex gap-2">
-              <select
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 h-10 px-2 bg-white border border-[#dce9ff] rounded-lg text-[12px] font-medium text-[#0b1c30] focus:outline-none"
-              >
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} - {formatMoney(p.priceWholesale)}
-                  </option>
-                ))}
-              </select>
+            {/* Select full width */}
+            <select
+              value={selectedProductId}
+              onChange={(e) => setSelectedProductId(e.target.value)}
+              className="w-full h-10 px-2.5 bg-white border border-[#cbd5e1] rounded-lg text-[12px] font-bold text-[#0b1c30] focus:ring-2 focus:ring-[#00236f] focus:outline-none truncate"
+            >
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.presentation}) - {formatMoney(p.priceWholesale)}
+                </option>
+              ))}
+            </select>
 
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-16 h-10 px-2 text-center bg-white border border-[#dce9ff] rounded-lg text-[13px] font-bold"
-              />
+            {/* Row below: Quantity selector + Add Button (Fully visible without scrolling right) */}
+            <div className="flex items-center gap-2 pt-0.5">
+              <div className="flex items-center border border-[#cbd5e1] rounded-lg bg-white overflow-hidden shrink-0 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="w-8 h-9 flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold text-[16px] cursor-pointer"
+                  title="Restar cantidad"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-12 h-9 text-center font-bold text-[13px] text-[#0b1c30] border-x border-[#cbd5e1] focus:outline-none"
+                  title="Cantidad de bultos"
+                />
+                <button
+                  type="button"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="w-8 h-9 flex items-center justify-center text-slate-600 hover:bg-slate-100 font-bold text-[16px] cursor-pointer"
+                  title="Sumar cantidad"
+                >
+                  +
+                </button>
+              </div>
 
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="h-10 px-3 bg-[#006c4a] hover:bg-[#005137] text-white text-[12px] font-bold rounded-lg shrink-0 flex items-center justify-center cursor-pointer"
+                className="flex-1 h-9 bg-[#006c4a] hover:bg-[#005137] active:scale-98 text-white text-[12px] font-bold rounded-lg flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
               >
-                + Añadir
+                <LocalIcon name="add_shopping_cart" className="w-4 h-4" />
+                <span>+ Añadir al Pedido</span>
               </button>
             </div>
           </div>

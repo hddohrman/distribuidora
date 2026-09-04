@@ -11,6 +11,7 @@ interface HeaderProps {
   onSwitchRole: () => void;
   onOpenWhatsAppSync: () => void;
   onOpenWebAdmin?: () => void;
+  onOpenOpciones?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSwitchRole,
   onOpenWhatsAppSync,
   onOpenWebAdmin,
+  onOpenOpciones,
 }) => {
   const isClient = authSession?.role === 'cliente';
   const isAdmin = authSession?.role === 'admin';
@@ -124,6 +126,18 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-[#0b1c30] hover:bg-[#e5eeff] hover:text-[#00236f] active:scale-95 transition-all cursor-pointer"
             >
               <LocalIcon name="qr_code_scanner" className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+            </button>
+          )}
+
+          {onOpenOpciones && (
+            <button
+              type="button"
+              onClick={onOpenOpciones}
+              aria-label="Opciones y configuración de empresa"
+              title="Opciones y configuración de empresa"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-[#0b1c30] hover:bg-[#e5eeff] hover:text-[#00236f] active:scale-95 transition-all cursor-pointer"
+            >
+              <LocalIcon name="settings" className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
             </button>
           )}
 

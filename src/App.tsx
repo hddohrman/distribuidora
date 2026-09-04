@@ -48,6 +48,7 @@ import { WhatsAppCatalogModal } from './components/WhatsAppCatalogModal';
 import { ClientOrderModal } from './components/ClientOrderModal';
 import { ManualTecnicoModal } from './components/ManualTecnicoModal';
 import { WebAdminView } from './components/WebAdminView';
+import { OpcionesView } from './components/OpcionesView';
 import { LocalIcon } from './components/LocalIcon';
 
 export default function App() {
@@ -89,41 +90,53 @@ export default function App() {
     cuit: '30-71234567-8',
   });
 
+  const defaultCompanySettings: CompanySettings = {
+    companyName: 'DistriPro Salta S.A. Mayorista',
+    cuit: '30-71234567-8',
+    headquartersWhatsApp: '+54 9 387 512-3456',
+    phoneSecondary: '+54 9 387 421-9988',
+    address: 'Av. San Martín 2340, Parque Industrial',
+    city: 'Salta Capital, Salta',
+    email: 'pedidos@distriprosalta.com.ar',
+    businessHours: 'Lunes a Sábado de 07:30 a 17:00 hs',
+    ticketFooterNotes: '¡Gracias por su compra! Reclamos de mercadería dentro de las 48hs de recibido.',
+    cashDiscountPercent: 10,
+    bankInfo: {
+      alias: 'DISTRI.PRO.PAGOS',
+      cbu: '0000003100012345678901',
+      bankName: 'Banco Macro Salta',
+      accountHolder: 'DistriPro Salta S.A. Mayorista',
+      cuit: '30-71234567-8',
+    },
+  };
+
   const [companySettings, setCompanySettings] = useState<CompanySettings>(() => {
     const saved = localStorage.getItem('distripro_company_settings');
-    if (saved) {
+    if (saved && saved !== 'undefined' && saved !== 'null') {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            ...defaultCompanySettings,
+            ...parsed,
+            headquartersWhatsApp: parsed.headquartersWhatsApp || defaultCompanySettings.headquartersWhatsApp,
+            bankInfo: parsed.bankInfo || defaultCompanySettings.bankInfo,
+          };
+        }
       } catch (e) {}
     }
-    return {
-      companyName: 'DistriPro Salta S.A. Mayorista',
-      cuit: '30-71234567-8',
-      headquartersWhatsApp: '+54 9 387 512-3456',
-      phoneSecondary: '+54 9 387 421-9988',
-      address: 'Av. San Martín 2340, Parque Industrial',
-      city: 'Salta Capital, Salta',
-      email: 'pedidos@distriprosalta.com.ar',
-      businessHours: 'Lunes a Sábado de 07:30 a 17:00 hs',
-      ticketFooterNotes: '¡Gracias por su compra! Reclamos de mercadería dentro de las 48hs de recibido.',
-      cashDiscountPercent: 10,
-      bankInfo: {
-        alias: 'DISTRI.PRO.PAGOS',
-        cbu: '0000003100012345678901',
-        bankName: 'Banco Macro Salta',
-        accountHolder: 'DistriPro Salta S.A. Mayorista',
-        cuit: '30-71234567-8',
-      },
-    };
+    return defaultCompanySettings;
   });
 
   useEffect(() => {
-    localStorage.setItem('distripro_company_settings', JSON.stringify(companySettings));
-    if (companySettings.cashDiscountPercent !== cashDiscountPercent) {
-      setCashDiscountPercent(companySettings.cashDiscountPercent);
-    }
-    if (companySettings.bankInfo) {
-      setBankInfo(companySettings.bankInfo);
+    if (companySettings) {
+      localStorage.setItem('distripro_company_settings', JSON.stringify(companySettings));
+      if (companySettings.cashDiscountPercent !== undefined && companySettings.cashDiscountPercent !== cashDiscountPercent) {
+        setCashDiscountPercent(companySettings.cashDiscountPercent);
+      }
+      if (companySettings.bankInfo) {
+        setBankInfo(companySettings.bankInfo);
+      }
     }
   }, [companySettings]);
 
@@ -285,6 +298,41 @@ export default function App() {
   const pendingCollections = collections.filter((c) => c.status === 'pending_sync');
   const pendingCount = pendingOrders.length + pendingCollections.length + 3;
 
+  // Helper to deduct stock, including individual components when selling a combo pack
+  const deductStockForOrderItems = (orderItems: BasketItem[], saleType: 'in_situ' | 'preventa' | 'remito') => {
+    setProducts((prev) => {
+      const updated = prev.map((p) => ({ ...p }));
+      orderItems.forEach((item) => {
+        const prod = updated.find((p) => p.id === item.productId);
+        if (prod) {
+          const isVan = saleType === 'in_situ';
+          // Check if this product is a combo with constituent items
+          if (prod.isCombo && prod.comboItems && prod.comboItems.length > 0) {
+            // Deduct stock from constituent items
+            prod.comboItems.forEach((cItem) => {
+              const subProd = updated.find((p) => p.id === cItem.productId);
+              if (subProd) {
+                const totalDeduction = cItem.quantity * item.quantity;
+                if (isVan) {
+                  subProd.stockVan = Math.max(0, subProd.stockVan - totalDeduction);
+                } else {
+                  subProd.stockCentral = Math.max(0, subProd.stockCentral - totalDeduction);
+                }
+              }
+            });
+          }
+          // Also deduct the main product item stock
+          if (isVan) {
+            prod.stockVan = Math.max(0, prod.stockVan - item.quantity);
+          } else {
+            prod.stockCentral = Math.max(0, prod.stockCentral - item.quantity);
+          }
+        }
+      });
+      return updated;
+    });
+  };
+
   // Handle Fast Draft Sale (from the main Pedidos screen)
   const handleRegisterFastDraftSale = (
     client: Client,
@@ -320,6 +368,7 @@ export default function App() {
     };
 
     setOrders([newOrder, ...orders]);
+    deductStockForOrderItems(items, 'in_situ');
 
     if (paymentMethod === 'cta_cte') {
       setClients((prev) =>
@@ -342,6 +391,7 @@ export default function App() {
   // Handle Full New Sale from Vendor
   const handleCompleteSale = (order: Order) => {
     setOrders([order, ...orders]);
+    deductStockForOrderItems(order.items, order.type);
     triggerToast('¡Pedido Creado!', `${order.clientName} - ${order.orderNumber}`);
     setTimeout(() => {
       setTicketOrder(order);
@@ -351,6 +401,7 @@ export default function App() {
   // Handle Client Confirm Order
   const handleConfirmClientOrder = (order: Order, sendWhatsApp: boolean) => {
     setOrders([order, ...orders]);
+    deductStockForOrderItems(order.items, order.type);
     setClientBasket([]);
 
     if (order.paymentMethod === 'cta_cte') {
@@ -396,23 +447,30 @@ export default function App() {
       .join('%0A');
 
     const isClientRole = authSession?.role === 'cliente';
+    const enterpriseName = companySettings.companyName || 'Distribuidora Mayorista';
     const title = isClientRole
-      ? '*DISTRIPRO S.A. - NUEVO PEDIDO DE COMERCIO (CLIENTE)*'
-      : '*DISTRIPRO S.A. - Comprobante de Entrega Preventa*';
+      ? `*${enterpriseName.toUpperCase()} - NUEVO PEDIDO DE COMERCIO*`
+      : `*${enterpriseName.toUpperCase()} - Comprobante de Entrega Preventa*`;
 
     let paymentDetailText = '';
     if (order.paymentMethod === 'efectivo') {
       paymentDetailText = `*Forma de Pago:* EFECTIVO CONTADO%0A*Subtotal Lista:* $${(order.subtotalOriginal || order.total).toLocaleString('es-AR')}%0A*Descuento Comercial:* -${order.discountPercent || cashDiscountPercent}% (-$${(order.discountAmount || 0).toLocaleString('es-AR')})%0A*TOTAL A PAGAR EN MANO:* $${order.total.toLocaleString('es-AR')}`;
     } else if (order.paymentMethod === 'qr' || order.paymentMethod === 'transferencia') {
-      paymentDetailText = `*Forma de Pago:* TRANSFERENCIA / QR%0A*TOTAL TRANSFERIDO:* $${order.total.toLocaleString('es-AR')}%0A*Alias Receptor:* ${bankInfo.alias}%0A*CBU:* ${bankInfo.cbu}%0A*Titular:* ${bankInfo.accountHolder}%0A*Ref. Comprobante:* ${order.transferProof || 'Se adjunta en este mensaje'}`;
+      paymentDetailText = `*Forma de Pago:* TRANSFERENCIA / QR%0A*TOTAL TRANSFERIDO:* $${order.total.toLocaleString('es-AR')}%0A*Alias Receptor:* ${companySettings.bankInfo?.alias || bankInfo.alias}%0A*CBU:* ${companySettings.bankInfo?.cbu || bankInfo.cbu}%0A*Titular:* ${companySettings.bankInfo?.accountHolder || bankInfo.accountHolder}%0A*Ref. Comprobante:* ${order.transferProof || 'Se adjunta en este mensaje'}`;
     } else {
       paymentDetailText = `*Forma de Pago:* CUENTA CORRIENTE (A Plazo)%0A*TOTAL CARGADO A CUENTA:* $${order.total.toLocaleString('es-AR')}${order.creditRemaining !== undefined ? `%0A*Margen de Crédito Restante:* $${order.creditRemaining.toLocaleString('es-AR')}` : ''}`;
     }
 
-    const message = `${title}%0A%0A*Pedido:* ${order.orderNumber}%0A*Comercio:* ${order.clientName} (${order.clientCode})%0A*Fecha:* ${order.date}, ${order.time}%0A%0A*Detalle de Mercadería:*%0A${itemsText}%0A%0A${paymentDetailText}%0A%0A*Observaciones / Entrega:* ${order.notes || 'Ninguna'}%0A%0A_Generado desde DistriPro Móvil_`;
+    const message = `${title}%0A%0A*Pedido:* ${order.orderNumber}%0A*Comercio:* ${order.clientName} (${order.clientCode})%0A*Fecha:* ${order.date}, ${order.time}%0A%0A*Detalle de Mercadería:*%0A${itemsText}%0A%0A${paymentDetailText}%0A%0A*Observaciones / Entrega:* ${order.notes || 'Ninguna'}%0A%0A_Generado mediante sistema DistriPro_`;
 
+    // WhatsApp recipient resolution:
+    // If client is placing an order, send to company's configured headquarters WhatsApp
+    // If vendor is sharing ticket, prioritize client phone or fallback to company WhatsApp
+    const headquartersPhoneClean = (companySettings?.headquartersWhatsApp || '+54 9 387 512-3456').replace(/[^0-9]/g, '');
     const clientObj = clients.find((c) => c.id === order.clientId) || activeClient;
-    const phone = clientObj ? clientObj.phone.replace(/[^0-9]/g, '') : '';
+    const clientPhoneClean = clientObj ? clientObj.phone.replace(/[^0-9]/g, '') : '';
+    const phone = isClientRole ? headquartersPhoneClean : (clientPhoneClean || headquartersPhoneClean);
+
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   };
 
@@ -681,7 +739,12 @@ export default function App() {
           expenses={expenses}
           suppliers={suppliers}
           companySettings={companySettings}
-          onUpdateCompanySettings={(settings) => setCompanySettings(settings)}
+          onUpdateCompanySettings={(settings) => {
+            setCompanySettings(settings);
+            setCashDiscountPercent(settings.cashDiscountPercent);
+            setBankInfo(settings.bankInfo);
+            localStorage.setItem('distripro_company_settings', JSON.stringify(settings));
+          }}
           cashDiscountPercent={cashDiscountPercent}
           bankInfo={bankInfo}
           categories={categories}
@@ -760,6 +823,7 @@ export default function App() {
         onSwitchRole={() => setIsLoginModalOpen(true)}
         onOpenWhatsAppSync={() => setIsWhatsAppCatalogOpen(true)}
         onOpenWebAdmin={handleOpenWebAdmin}
+        onOpenOpciones={() => setActiveTab('opciones')}
       />
 
       {/* Main Content Area */}
@@ -873,6 +937,23 @@ export default function App() {
             productsCount={products.length}
           />
         )}
+
+        {activeTab === 'opciones' && (
+          <OpcionesView
+            settings={companySettings}
+            onSaveSettings={(newSettings) => {
+              setCompanySettings(newSettings);
+              setCashDiscountPercent(newSettings.cashDiscountPercent);
+              setBankInfo(newSettings.bankInfo);
+              localStorage.setItem('distripro_company_settings', JSON.stringify(newSettings));
+              triggerToast(
+                'Opciones Guardadas',
+                `Datos y logo de ${newSettings.companyName} actualizados correctamente.`
+              );
+            }}
+            onBack={() => setActiveTab(userRole === 'cliente' ? 'catalogo' : 'pedidos')}
+          />
+        )}
       </main>
 
       {/* Sticky Bottom Navigation */}
@@ -925,6 +1006,7 @@ export default function App() {
         order={ticketOrder}
         onClose={() => setTicketOrder(null)}
         onSendWhatsApp={handleSendTicketWhatsApp}
+        companySettings={companySettings}
       />
 
       <ScannerModal
@@ -962,6 +1044,10 @@ export default function App() {
         onSwitchRole={() => setIsLoginModalOpen(true)}
         onOpenManualTecnico={() => setIsManualTecnicoOpen(true)}
         onOpenWebAdmin={handleOpenWebAdmin}
+        onOpenOpciones={() => {
+          setIsProfileOpen(false);
+          setActiveTab('opciones');
+        }}
       />
 
       <ManualTecnicoModal
