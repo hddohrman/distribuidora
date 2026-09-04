@@ -50,6 +50,18 @@ import {
   Building,
   User,
   History,
+  BarChart3,
+  Users,
+  Percent,
+  DollarSign,
+  Edit,
+  Copy,
+  FileText,
+  Settings,
+  Filter,
+  ArrowUpRight,
+  ArrowDownRight,
+  Tag,
 } from 'lucide-react';
 
 export type IconName =
@@ -231,6 +243,40 @@ export const LocalIcon: React.FC<LocalIconProps> = ({
       return <Search {...iconProps} />;
     case 'history':
       return <History {...iconProps} />;
+    case 'bar_chart':
+    case 'analytics':
+      return <BarChart3 {...iconProps} />;
+    case 'users':
+    case 'group':
+      return <Users {...iconProps} />;
+    case 'user':
+      return <User {...iconProps} />;
+    case 'percent':
+      return <Percent {...iconProps} />;
+    case 'dollar_sign':
+    case 'monetization_on':
+      return <DollarSign {...iconProps} />;
+    case 'edit':
+    case 'edit_note':
+      return <Edit {...iconProps} />;
+    case 'copy':
+    case 'content_copy':
+      return <Copy {...iconProps} />;
+    case 'file_text':
+    case 'description':
+      return <FileText {...iconProps} />;
+    case 'settings':
+      return <Settings {...iconProps} />;
+    case 'filter':
+    case 'filter_list':
+      return <Filter {...iconProps} />;
+    case 'arrow_up_right':
+      return <ArrowUpRight {...iconProps} />;
+    case 'arrow_down_right':
+      return <ArrowDownRight {...iconProps} />;
+    case 'tag':
+    case 'label':
+      return <Tag {...iconProps} />;
     default:
       return <Package {...iconProps} />;
   }

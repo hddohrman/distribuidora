@@ -4,9 +4,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copiar manifiesto de dependencias y bloquear versiones
+# Copiar manifiesto de dependencias e instalar dependencias
 COPY package*.json ./
-RUN npm ci --only=production=false
+RUN npm install
 
 # Copiar el código fuente y compilar
 COPY . .

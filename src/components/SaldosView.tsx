@@ -9,7 +9,9 @@ interface SaldosViewProps {
     client: Client,
     amount: number,
     method: PaymentMethod,
-    notes?: string
+    notes?: string,
+    adjustmentType?: 'none' | 'descuento' | 'recargo',
+    adjustmentAmount?: number
   ) => void;
   onViewReceipt: (receipt: PaymentCollection) => void;
 }
@@ -23,6 +25,9 @@ export const SaldosView: React.FC<SaldosViewProps> = ({
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [amountInput, setAmountInput] = useState<string>('');
   const [method, setMethod] = useState<PaymentMethod>('efectivo');
+  const [adjustmentType, setAdjustmentType] = useState<'none' | 'descuento' | 'recargo'>('none');
+  const [adjustmentAmount, setAdjustmentAmount] = useState<number>(0);
+  const [adjustmentNotes, setAdjustmentNotes] = useState<string>('');
 
   const debtorClients = clients.filter((c) => c.currentDebt > 0);
   const totalDebt = debtorClients.reduce((acc, c) => acc + c.currentDebt, 0);
@@ -40,6 +45,9 @@ export const SaldosView: React.FC<SaldosViewProps> = ({
   const handleOpenPayment = (client: Client) => {
     setSelectedClient(client);
     setAmountInput(client.currentDebt.toString());
+    setAdjustmentType('none');
+    setAdjustmentAmount(0);
+    setAdjustmentNotes('');
   };
 
   const handleConfirmPayment = (e: React.FormEvent) => {
@@ -48,9 +56,19 @@ export const SaldosView: React.FC<SaldosViewProps> = ({
     const numericAmount = parseFloat(amountInput);
     if (isNaN(numericAmount) || numericAmount <= 0) return;
 
-    onRecordPayment(selectedClient, numericAmount, method);
+    onRecordPayment(
+      selectedClient,
+      numericAmount,
+      method,
+      adjustmentNotes || undefined,
+      adjustmentType,
+      adjustmentAmount
+    );
     setSelectedClient(null);
     setAmountInput('');
+    setAdjustmentType('none');
+    setAdjustmentAmount(0);
+    setAdjustmentNotes('');
   };
 
   return (
@@ -221,34 +239,155 @@ export const SaldosView: React.FC<SaldosViewProps> = ({
               </button>
             </div>
 
-            <div className="p-3 bg-[#eff4ff] rounded-lg border border-[#dce9ff] text-[12px]">
+            <div className="p-3 bg-[#eff4ff] rounded-lg border border-[#dce9ff] text-[12px] space-y-1">
               <div className="font-bold text-[#0b1c30]">{selectedClient.name}</div>
               <div className="text-[#444651]">{selectedClient.code}</div>
-              <div className="text-[#ba1a1a] font-bold mt-1">
-                Saldo pendiente: {formatMoney(selectedClient.currentDebt)}
+              <div className="text-[#ba1a1a] font-bold">
+                Saldo pendiente total: {formatMoney(selectedClient.currentDebt)}
+              </div>
+              <div className="pt-1 border-t border-[#dce9ff] text-[11px] text-slate-600 flex items-start gap-1">
+                <span className="font-bold text-amber-700 shrink-0">⚠️ Nota Cta. Cte.:</span>
+                <span>Por más que abone en efectivo, no se aplica descuento automático. Cancela el saldo total o el importe acordado.</span>
               </div>
             </div>
 
-            <form onSubmit={handleConfirmPayment} className="space-y-3">
+            <form onSubmit={handleConfirmPayment} noValidate className="space-y-3">
               <div>
-                <label className="block text-[11px] font-semibold text-[#444651] mb-1">
-                  Monto a Cobrar ($)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-semibold text-[#444651]">
+                    Monto a Imputar de la Deuda ($)
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    Total: {formatMoney(selectedClient.currentDebt)}
+                  </span>
+                </div>
                 <input
                   type="number"
-                  step="100"
-                  min="1"
-                  max={selectedClient.currentDebt * 2}
+                  step="any"
+                  min="0.01"
                   value={amountInput}
                   onChange={(e) => setAmountInput(e.target.value)}
-                  className="w-full h-11 px-3 bg-[#f8f9ff] border border-[#dce9ff] rounded-lg text-[16px] font-bold text-[#0b1c30] focus:ring-2 focus:ring-[#00236f] focus:outline-none"
+                  placeholder="0"
+                  className="w-full h-11 px-3 bg-[#f8f9ff] border border-[#dce9ff] rounded-lg text-[16px] font-bold text-[#0b1c30] focus:ring-2 focus:ring-[#00236f] focus:outline-none font-mono"
                   required
                 />
+                {/* Accesos rápidos para cancelar el total o una fracción */}
+                <div className="flex items-center gap-1.5 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAmountInput(String(selectedClient.currentDebt))}
+                    className="flex-1 py-1 px-2 rounded-md bg-[#eff4ff] hover:bg-[#dce9ff] text-[#00236f] border border-[#c5d8ff] text-[11px] font-bold transition-all cursor-pointer text-center active:scale-95"
+                  >
+                    ✓ Pagar Total ({formatMoney(selectedClient.currentDebt)})
+                  </button>
+                  {selectedClient.currentDebt > 10 && (
+                    <button
+                      type="button"
+                      onClick={() => setAmountInput(String(Math.round(selectedClient.currentDebt / 2)))}
+                      className="py-1 px-2 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-medium transition-all cursor-pointer active:scale-95"
+                    >
+                      50% ({formatMoney(Math.round(selectedClient.currentDebt / 2))})
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Ajuste manual: Descuento o Recargo */}
+              <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-700">
+                    Ajuste Comercial Especial (Opcional):
+                  </label>
+                  {adjustmentType !== 'none' && (
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        adjustmentType === 'descuento'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-900'
+                      }`}
+                    >
+                      {adjustmentType === 'descuento' ? 'Descuento' : 'Recargo'}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdjustmentType('none');
+                      setAdjustmentAmount(0);
+                    }}
+                    className={`h-7 rounded text-[11px] font-bold transition-all ${
+                      adjustmentType === 'none'
+                        ? 'bg-[#00236f] text-white shadow-2xs'
+                        : 'bg-white border border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    Sin Ajuste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdjustmentType('descuento')}
+                    className={`h-7 rounded text-[11px] font-bold transition-all ${
+                      adjustmentType === 'descuento'
+                        ? 'bg-emerald-700 text-white shadow-2xs'
+                        : 'bg-white border border-slate-200 text-emerald-800'
+                    }`}
+                  >
+                    - Descuento ($)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdjustmentType('recargo')}
+                    className={`h-7 rounded text-[11px] font-bold transition-all ${
+                      adjustmentType === 'recargo'
+                        ? 'bg-amber-600 text-white shadow-2xs'
+                        : 'bg-white border border-slate-200 text-amber-900'
+                    }`}
+                  >
+                    + Recargo ($)
+                  </button>
+                </div>
+
+                {adjustmentType !== 'none' && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                        {adjustmentType === 'descuento' ? 'Monto Bonificación ($):' : 'Monto Recargo/Interés ($):'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={adjustmentAmount === 0 ? '' : adjustmentAmount}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdjustmentAmount(val === '' ? 0 : Math.max(0, parseFloat(val) || 0));
+                        }}
+                        placeholder="Ej: 500"
+                        className="w-full h-8 px-2 bg-white border border-slate-300 rounded text-[12px] font-mono font-bold text-[#00236f]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">
+                        Motivo / Justificación:
+                      </label>
+                      <input
+                        type="text"
+                        value={adjustmentNotes}
+                        onChange={(e) => setAdjustmentNotes(e.target.value)}
+                        placeholder="Ej: Bonificación pactada"
+                        className="w-full h-8 px-2 bg-white border border-slate-300 rounded text-[11px]"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-[#444651] mb-1">
-                  Medio de Pago
+                  Medio de Pago Percibido
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -261,7 +400,7 @@ export const SaldosView: React.FC<SaldosViewProps> = ({
                     }`}
                   >
                     <LocalIcon name="payments" className="w-4 h-4" />
-                    <span>Efectivo</span>
+                    <span>Efectivo (Sin desc.)</span>
                   </button>
                   <button
                     type="button"
@@ -277,6 +416,38 @@ export const SaldosView: React.FC<SaldosViewProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Resumen de cobro final */}
+              {(() => {
+                const num = parseFloat(amountInput) || 0;
+                const adj = adjustmentType === 'none' ? 0 : adjustmentAmount;
+                const toCollect = adjustmentType === 'descuento' ? Math.max(0, num - adj) : num + adj;
+                const remainingDebt = Math.max(0, selectedClient.currentDebt - num);
+                return (
+                  <div className="p-2.5 bg-slate-100 rounded-lg text-[11px] space-y-1">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Deuda a imputar:</span>
+                      <span className="font-mono font-semibold">{formatMoney(num)}</span>
+                    </div>
+                    {adjustmentType !== 'none' && adj > 0 && (
+                      <div className="flex justify-between text-emerald-800">
+                        <span>{adjustmentType === 'descuento' ? 'Descuento especial:' : 'Recargo:'}</span>
+                        <span className="font-mono font-bold">
+                          {adjustmentType === 'descuento' ? `-${formatMoney(adj)}` : `+${formatMoney(adj)}`}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-[#00236f] pt-1 border-t border-slate-200 text-[13px]">
+                      <span>Total Efectivo/QR a Cobrar:</span>
+                      <span className="font-mono">{formatMoney(toCollect)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span>Saldo que le quedará al cliente:</span>
+                      <span className="font-mono font-bold">{formatMoney(remainingDebt)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="pt-2 flex items-center gap-2">
                 <button

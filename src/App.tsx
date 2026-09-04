@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   TabType,
   Product,
@@ -15,12 +15,21 @@ import {
   SyncBatchInfo,
   AuthSession,
   BankInfo,
+  SupplierPurchase,
+  OperatingExpense,
+  Supplier,
+  CompanySettings,
 } from './types';
 import {
   INITIAL_PRODUCTS,
   INITIAL_CLIENTS,
   INITIAL_ORDERS,
   INITIAL_SYNC_BATCH,
+  INITIAL_CATEGORIES,
+  INITIAL_ZONES,
+  INITIAL_PURCHASES,
+  INITIAL_EXPENSES,
+  INITIAL_SUPPLIERS,
 } from './data/mockData';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -38,6 +47,7 @@ import { LoginModal } from './components/LoginModal';
 import { WhatsAppCatalogModal } from './components/WhatsAppCatalogModal';
 import { ClientOrderModal } from './components/ClientOrderModal';
 import { ManualTecnicoModal } from './components/ManualTecnicoModal';
+import { WebAdminView } from './components/WebAdminView';
 import { LocalIcon } from './components/LocalIcon';
 
 export default function App() {
@@ -74,10 +84,96 @@ export default function App() {
   const [bankInfo, setBankInfo] = useState<BankInfo>({
     alias: 'DISTRI.PRO.PAGOS',
     cbu: '0000003100012345678901',
-    bankName: 'Banco Galicia',
-    accountHolder: 'DistriPro S.A. Mayorista',
+    bankName: 'Banco Macro Salta',
+    accountHolder: 'DistriPro Salta S.A. Mayorista',
     cuit: '30-71234567-8',
   });
+
+  const [companySettings, setCompanySettings] = useState<CompanySettings>(() => {
+    const saved = localStorage.getItem('distripro_company_settings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      companyName: 'DistriPro Salta S.A. Mayorista',
+      cuit: '30-71234567-8',
+      headquartersWhatsApp: '+54 9 387 512-3456',
+      phoneSecondary: '+54 9 387 421-9988',
+      address: 'Av. San Martín 2340, Parque Industrial',
+      city: 'Salta Capital, Salta',
+      email: 'pedidos@distriprosalta.com.ar',
+      businessHours: 'Lunes a Sábado de 07:30 a 17:00 hs',
+      ticketFooterNotes: '¡Gracias por su compra! Reclamos de mercadería dentro de las 48hs de recibido.',
+      cashDiscountPercent: 10,
+      bankInfo: {
+        alias: 'DISTRI.PRO.PAGOS',
+        cbu: '0000003100012345678901',
+        bankName: 'Banco Macro Salta',
+        accountHolder: 'DistriPro Salta S.A. Mayorista',
+        cuit: '30-71234567-8',
+      },
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('distripro_company_settings', JSON.stringify(companySettings));
+    if (companySettings.cashDiscountPercent !== cashDiscountPercent) {
+      setCashDiscountPercent(companySettings.cashDiscountPercent);
+    }
+    if (companySettings.bankInfo) {
+      setBankInfo(companySettings.bankInfo);
+    }
+  }, [companySettings]);
+
+  // Rubros y Zonas de Reparto
+  const [categories, setCategories] = useState<string[]>(INITIAL_CATEGORIES);
+  const [zones, setZones] = useState<string[]>(INITIAL_ZONES);
+
+  // Purchases and Operating Expenses
+  const [purchases, setPurchases] = useState<SupplierPurchase[]>(() => {
+    const saved = localStorage.getItem('distripro_purchases');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_PURCHASES;
+  });
+
+  const [expenses, setExpenses] = useState<OperatingExpense[]>(() => {
+    const saved = localStorage.getItem('distripro_expenses');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_EXPENSES;
+  });
+
+  // Suppliers Directory & Contacts
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
+    const saved = localStorage.getItem('distripro_suppliers');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_SUPPLIERS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('distripro_purchases', JSON.stringify(purchases));
+  }, [purchases]);
+
+  useEffect(() => {
+    localStorage.setItem('distripro_expenses', JSON.stringify(expenses));
+  }, [expenses]);
+
+  useEffect(() => {
+    localStorage.setItem('distripro_suppliers', JSON.stringify(suppliers));
+  }, [suppliers]);
 
   // Client Basket (for client ordering from catalog)
   const [clientBasket, setClientBasket] = useState<BasketItem[]>([]);
@@ -107,7 +203,13 @@ export default function App() {
     setAuthSession(session);
     setIsLoginModalOpen(false);
 
-    if (session.role === 'cliente' && session.client) {
+    if (session.role === 'admin') {
+      setActiveTab('admin');
+      triggerToast(
+        'Casa Central Activada',
+        'Bienvenido al panel web de administración y rentabilidad.'
+      );
+    } else if (session.role === 'cliente' && session.client) {
       setActiveClient(session.client);
       setActiveTab('catalogo');
       triggerToast(
@@ -121,6 +223,61 @@ export default function App() {
         `Bienvenido David C. Acceso completo a stock, ventas y cobranzas.`
       );
     }
+  };
+
+  const handleOpenWebAdmin = () => {
+    setAuthSession({
+      role: 'admin',
+      adminName: 'Administración Central',
+    });
+    setActiveTab('admin');
+    triggerToast('Casa Central Activada', 'Panel de administración web.');
+  };
+
+  const handleOpenMobileApp = () => {
+    setAuthSession({
+      role: 'vendedor',
+      vendorName: 'David C.',
+      vendorId: 'PREV-402',
+    });
+    setActiveTab('pedidos');
+    triggerToast('App Móvil de Calle', 'Vista de preventista activada.');
+  };
+
+  // Handle batch import into central database
+  const handleImportBatchIntoCentral = (payload: any) => {
+    let ordersAdded = 0;
+    let collectionsAdded = 0;
+
+    if (payload.orders && Array.isArray(payload.orders)) {
+      setOrders((prev) => {
+        const existingIds = new Set(prev.map((o) => o.id));
+        const newOrders = payload.orders.filter((o: Order) => !existingIds.has(o.id));
+        ordersAdded = newOrders.length;
+        return [...newOrders, ...prev];
+      });
+    }
+
+    if (payload.collections && Array.isArray(payload.collections)) {
+      setCollections((prev) => {
+        const existingIds = new Set(prev.map((c) => c.id));
+        const newCols = payload.collections.filter((c: PaymentCollection) => !existingIds.has(c.id));
+        collectionsAdded = newCols.length;
+        return [...newCols, ...prev];
+      });
+    }
+
+    if (payload.clients && Array.isArray(payload.clients)) {
+      setClients(payload.clients);
+    }
+    if (payload.products && Array.isArray(payload.products)) {
+      setProducts(payload.products);
+    }
+
+    triggerToast(
+      'Lote Consolidado en Central',
+      `Se incorporaron ${ordersAdded} pedidos y ${collectionsAdded} cobranzas al sistema.`
+    );
   };
 
   // Pending count calculation
@@ -436,8 +593,152 @@ export default function App() {
     triggerToast('¡Sincronización Exitosa!', data.message);
   };
 
+  const handleRenameCategory = (oldName: string, newName: string) => {
+    setCategories((prev) => prev.map((c) => (c === oldName ? newName : c)));
+    setProducts((prev) =>
+      prev.map((p) => (p.category === oldName ? { ...p, category: newName } : p))
+    );
+  };
+
+  const handleDeleteCategory = (catToDelete: string) => {
+    setCategories((prev) => prev.filter((c) => c !== catToDelete));
+    setProducts((prev) =>
+      prev.map((p) => (p.category === catToDelete ? { ...p, category: 'Almacén' } : p))
+    );
+  };
+
+  const handleRenameZone = (oldZone: string, newZone: string) => {
+    setZones((prev) => prev.map((z) => (z === oldZone ? newZone : z)));
+    setClients((prev) =>
+      prev.map((c) => (c.zone === oldZone ? { ...c, zone: newZone } : c))
+    );
+  };
+
+  const handleDeleteZone = (zoneToDelete: string) => {
+    setZones((prev) => prev.filter((z) => z !== zoneToDelete));
+    setClients((prev) =>
+      prev.map((c) => (c.zone === zoneToDelete ? { ...c, zone: 'Zona 04 Centro' } : c))
+    );
+  };
+
+  const handleProcessIncomingOrderFromWhatsApp = (order: Order) => {
+    setOrders((prev) => {
+      const idx = prev.findIndex((o) => o.id === order.id || o.orderNumber === order.orderNumber);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = { ...order, status: 'synced' };
+        return copy;
+      }
+      return [{ ...order, status: 'synced' }, ...prev];
+    });
+
+    setProducts((prev) =>
+      prev.map((p) => {
+        const item = order.items.find((it) => it.productId === p.id);
+        if (item) {
+          return {
+            ...p,
+            stockCentral: Math.max(0, p.stockCentral - item.quantity),
+          };
+        }
+        return p;
+      })
+    );
+
+    if (order.paymentMethod === 'cta_cte') {
+      setClients((prev) =>
+        prev.map((c) => {
+          if (c.id === order.clientId || c.code === order.clientCode) {
+            return {
+              ...c,
+              currentDebt: c.currentDebt + order.total,
+            };
+          }
+          return c;
+        })
+      );
+    }
+
+    triggerToast(
+      'Pedido Ingresado a Central',
+      `Pedido ${order.orderNumber} de ${order.clientName} registrado. Stock actualizado.`
+    );
+  };
+
   const userRole = authSession?.role || 'vendedor';
   const effectiveClient = authSession?.client || activeClient;
+
+  // Render Casa Central Web Admin Suite if user is admin
+  if (userRole === 'admin') {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-blue-100">
+        <WebAdminView
+          products={products}
+          clients={clients}
+          orders={orders}
+          collections={collections}
+          purchases={purchases}
+          expenses={expenses}
+          suppliers={suppliers}
+          companySettings={companySettings}
+          onUpdateCompanySettings={(settings) => setCompanySettings(settings)}
+          cashDiscountPercent={cashDiscountPercent}
+          bankInfo={bankInfo}
+          categories={categories}
+          zones={zones}
+          onUpdateProducts={(prods) => setProducts(prods)}
+          onUpdateClients={(clis) => setClients(clis)}
+          onUpdatePurchases={(p) => setPurchases(p)}
+          onUpdateExpenses={(e) => setExpenses(e)}
+          onUpdateSuppliers={(s) => setSuppliers(s)}
+          onUpdateCategories={(cats) => setCategories(cats)}
+          onUpdateZones={(zns) => setZones(zns)}
+          onRenameCategory={handleRenameCategory}
+          onDeleteCategory={handleDeleteCategory}
+          onRenameZone={handleRenameZone}
+          onDeleteZone={handleDeleteZone}
+          onUpdateCashDiscount={(pct) => setCashDiscountPercent(pct)}
+          onUpdateBankInfo={(b) => setBankInfo(b)}
+          onImportSyncBatch={handleImportBatchIntoCentral}
+          onProcessIncomingOrderJson={handleProcessIncomingOrderFromWhatsApp}
+          onOpenMobileApp={handleOpenMobileApp}
+          onTriggerToast={triggerToast}
+          onViewTicket={(ord) => setTicketOrder(ord)}
+        />
+
+        {/* Floating Action Toast Notification */}
+        {toast && (
+          <div className="fixed top-6 right-6 z-50 max-w-sm animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
+            <div className="bg-[#00236f] text-white p-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-[#82f5c1]/30">
+              <LocalIcon name="verified" className="w-6 h-6 text-[#82f5c1] shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[14px]">
+                  {toast.title}
+                </span>
+                <span className="text-[12px] text-[#dce1ff] truncate">
+                  {toast.message}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Global Login modal if opened */}
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => {
+            if (authSession) {
+              setIsLoginModalOpen(false);
+            }
+          }}
+          clients={clients}
+          currentSession={authSession}
+          onLogin={handleLogin}
+          onOpenWhatsAppCatalog={() => setIsWhatsAppCatalogOpen(true)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col antialiased selection:bg-blue-100">
@@ -458,6 +759,7 @@ export default function App() {
         authSession={authSession}
         onSwitchRole={() => setIsLoginModalOpen(true)}
         onOpenWhatsAppSync={() => setIsWhatsAppCatalogOpen(true)}
+        onOpenWebAdmin={handleOpenWebAdmin}
       />
 
       {/* Main Content Area */}
@@ -492,12 +794,13 @@ export default function App() {
             onOpenClientOrder={() => setIsClientOrderOpen(true)}
             onClientSubmitOrder={() => setIsClientOrderOpen(true)}
             onAddProductToOrder={(product, qty) => {
+              const effectivePrice = product.isOffer && product.offerPrice ? product.offerPrice : product.priceWholesale;
               if (userRole === 'cliente') {
                 const existingIdx = clientBasket.findIndex((it) => it.productId === product.id);
                 if (existingIdx >= 0) {
                   const updated = [...clientBasket];
                   updated[existingIdx].quantity += qty;
-                  updated[existingIdx].subtotal = updated[existingIdx].quantity * product.priceWholesale;
+                  updated[existingIdx].subtotal = updated[existingIdx].quantity * effectivePrice;
                   setClientBasket(updated);
                 } else {
                   setClientBasket([
@@ -507,8 +810,8 @@ export default function App() {
                       name: product.name,
                       presentation: product.presentation,
                       quantity: qty,
-                      unitPrice: product.priceWholesale,
-                      subtotal: qty * product.priceWholesale,
+                      unitPrice: effectivePrice,
+                      subtotal: qty * effectivePrice,
                     },
                   ]);
                 }
@@ -658,6 +961,7 @@ export default function App() {
         authSession={authSession}
         onSwitchRole={() => setIsLoginModalOpen(true)}
         onOpenManualTecnico={() => setIsManualTecnicoOpen(true)}
+        onOpenWebAdmin={handleOpenWebAdmin}
       />
 
       <ManualTecnicoModal

@@ -261,10 +261,11 @@ export const WhatsAppCatalogModal: React.FC<WhatsAppCatalogModalProps> = ({
       unitsPerPack: p.unitsPerPack,
       barcode: p.barcode,
       codePrefix: p.codePrefix,
+      imageUrl: p.imageUrl,
     }));
 
     const catalogPayload: CatalogSyncPayload = {
-      version: 'distripro-catalogo-v3.9',
+      version: 'distripro-catalogo-v4.0',
       date: new Date().toISOString(),
       vendor: 'David C.',
       zone: 'Zona 04 Centro',
@@ -280,7 +281,7 @@ export const WhatsAppCatalogModal: React.FC<WhatsAppCatalogModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `distripro_catalogo_y_clientes_${new Date().toISOString().slice(0, 10)}.dist`;
+    a.download = `catalogo_distripro_con_fotos_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -288,7 +289,7 @@ export const WhatsAppCatalogModal: React.FC<WhatsAppCatalogModalProps> = ({
 
     // Share link to WhatsApp
     const message = encodeURIComponent(
-      `*DISTRIPRO S.A. - CATÁLOGO Y CLIENTES ACTUALIZADOS*\n\nEstimado cliente, te compartimos el archivo *.dist con los precios vigentes, bonificación del ${cashDiscountPercent}% en efectivo, datos bancarios para transferencia y la lista de comercios autorizados con sus límites de crédito.`
+      `*DISTRIPRO S.A. - CATÁLOGO MAYORISTA CON FOTOS Y PRECIOS*\n\nEstimado cliente, te compartimos el archivo JSON del catálogo con fotos de productos, lista de precios vigentes y bonificación del ${cashDiscountPercent}% por pago en efectivo.\n\nPara cargarlo en tu app:\n1. Abrí la app DistriPro\n2. Tocá 'Actualizar Catálogo por WhatsApp'\n3. Seleccioná el archivo adjunto.`
     );
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
@@ -375,10 +376,10 @@ export const WhatsAppCatalogModal: React.FC<WhatsAppCatalogModalProps> = ({
               <LocalIcon name="upload_file" className="w-6 h-6" />
             </div>
             <p className="font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[13px] text-[#0b1c30]">
-              Toca para seleccionar el archivo .dist recibido
+              Toca para seleccionar el archivo JSON o .dist recibido
             </p>
             <p className="text-[11px] text-[#757682] mt-1">
-              Compatible con archivos de WhatsApp <code className="font-mono">.dist</code> o <code className="font-mono">.json</code>
+              Compatible con archivos de WhatsApp <code className="font-mono">.json</code> o <code className="font-mono">.dist</code>
             </p>
           </div>
 
@@ -411,7 +412,7 @@ export const WhatsAppCatalogModal: React.FC<WhatsAppCatalogModalProps> = ({
                 className="w-full h-10 bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-[12px] rounded-xl flex items-center justify-center gap-2 border border-[#25d366]/30 cursor-pointer transition-all"
               >
                 <LocalIcon name="share" className="w-4.5 h-4.5" />
-                <span>Exportar y Compartir Archivo .dist a Clientes</span>
+                <span>Exportar y Compartir Archivo JSON con Fotos</span>
               </button>
             )}
           </div>

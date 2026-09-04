@@ -4,6 +4,7 @@ import { LocalIcon } from './LocalIcon';
 
 interface CatalogoViewProps {
   products: Product[];
+  categoriesList?: string[];
   userRole?: UserRole;
   client?: Client;
   cashDiscountPercent?: number;
@@ -15,6 +16,7 @@ interface CatalogoViewProps {
 
 export const CatalogoView: React.FC<CatalogoViewProps> = ({
   products,
+  categoriesList,
   userRole = 'vendedor',
   client,
   cashDiscountPercent = 10,
@@ -25,10 +27,22 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [onlyOffersInRubro, setOnlyOffersInRubro] = useState(false);
   const [qtyState, setQtyState] = useState<{ [productId: string]: number }>({});
 
   const isClient = userRole === 'cliente';
-  const categories = ['Todos', 'Pañales', 'Perfumería', 'Golosinas', 'Almacén', 'Limpieza', 'Bebidas'];
+
+  const totalOffersCount = products.filter((p) => Boolean(p.isOffer)).length;
+
+  // Dynamic categories list based on props and existing products
+  const categories = React.useMemo(() => {
+    const rawList = (categoriesList && categoriesList.length > 0
+      ? categoriesList
+      : Array.from(new Set(products.map((p) => p.category)))
+    ).filter((c) => !c.toLowerCase().includes('oferta') && !c.toLowerCase().includes('promo'));
+
+    return ['Todos', '🔥 Ofertas & Promos', ...rawList];
+  }, [categoriesList, products]);
 
   const filteredProducts = products.filter((prod) => {
     const matchesSearch =
@@ -36,10 +50,31 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
       prod.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       prod.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
       prod.barcode.includes(searchTerm);
-    const matchesCategory =
-      selectedCategory === 'Todos' || prod.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+
+    if (!matchesSearch) return false;
+
+    if (selectedCategory === 'Todos') {
+      if (onlyOffersInRubro) return Boolean(prod.isOffer);
+      return true;
+    }
+
+    if (selectedCategory === '🔥 Ofertas & Promos') {
+      return Boolean(prod.isOffer) || prod.category.toLowerCase().includes('oferta') || prod.category.toLowerCase().includes('promo');
+    }
+
+    const matchesCategory = prod.category === selectedCategory;
+    if (!matchesCategory) return false;
+
+    if (onlyOffersInRubro) {
+      return Boolean(prod.isOffer);
+    }
+
+    return true;
   });
+
+  const offersInSelectedCategory = selectedCategory === 'Todos' || selectedCategory === '🔥 Ofertas & Promos'
+    ? totalOffersCount
+    : products.filter((p) => p.category === selectedCategory && Boolean(p.isOffer)).length;
 
   const getQty = (id: string) => qtyState[id] || 1;
 
@@ -155,7 +190,10 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
               <button
                 key={cat}
                 type="button"
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setOnlyOffersInRubro(false);
+                }}
                 className={`px-3 py-1 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all ${
                   isSel
                     ? 'bg-[#00236f] text-white shadow-xs'
@@ -167,6 +205,27 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
             );
           })}
         </div>
+
+        {/* Rubro offers filter toggle if category has offers */}
+        {selectedCategory !== '🔥 Ofertas & Promos' && offersInSelectedCategory > 0 && (
+          <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/80 px-3 py-1.5 rounded-lg text-[12px]">
+            <span className="text-amber-900 font-medium flex items-center gap-1">
+              <LocalIcon name="local_fire_department" className="w-3.5 h-3.5 text-amber-600" />
+              <span>Hay <strong>{offersInSelectedCategory}</strong> {offersInSelectedCategory === 1 ? 'oferta' : 'ofertas'} en este rubro</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setOnlyOffersInRubro(!onlyOffersInRubro)}
+              className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                onlyOffersInRubro
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-white text-amber-800 border border-amber-300 hover:bg-amber-100'
+              }`}
+            >
+              {onlyOffersInRubro ? '✓ Mostrando solo ofertas' : 'Ver solo ofertas'}
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Product List */}
@@ -189,17 +248,52 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
         {filteredProducts.map((prod) => {
           const qty = getQty(prod.id);
           const hasTruckStock = prod.stockTruck > 0;
+          const isPromo = Boolean(prod.isOffer);
+          const effectivePrice = isPromo && prod.offerPrice ? prod.offerPrice : prod.priceWholesale;
+          const hasPromoDiscount = Boolean(isPromo && prod.offerPrice && prod.offerPrice < prod.priceWholesale);
 
           return (
             <article
               key={prod.id}
-              className="bg-white p-3.5 rounded-xl shadow-xs border border-[#e2e8f0] flex flex-col gap-2.5 transition-all hover:border-[#cbdbf5]"
+              className={`p-3.5 rounded-xl shadow-xs border flex flex-col gap-2.5 transition-all ${
+                isPromo
+                  ? 'bg-amber-50/30 border-amber-300 hover:border-amber-400'
+                  : 'bg-white border-[#e2e8f0] hover:border-[#cbdbf5]'
+              }`}
             >
+              {/* Promo Badge if applicable */}
+              {isPromo && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-amber-500 text-white shadow-2xs flex items-center gap-1">
+                    <LocalIcon name="local_fire_department" className="w-3 h-3 text-white" />
+                    <span>{prod.offerBadge || 'Super Promo / Oferta'}</span>
+                  </span>
+                  {prod.offerDescription && (
+                    <span className="text-[11px] text-amber-900 font-medium">
+                      {prod.offerDescription}
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2.5 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-[#eff4ff] border border-[#dce9ff] flex items-center justify-center text-[#00236f] font-bold text-[14px] shrink-0">
-                    {prod.codePrefix}
-                  </div>
+                  {prod.imageUrl ? (
+                    <div className="w-12 h-12 rounded-lg border border-[#dce9ff] overflow-hidden shrink-0 bg-slate-50 flex items-center justify-center shadow-2xs">
+                      <img
+                        src={prod.imageUrl}
+                        alt={prod.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-11 h-11 rounded-lg bg-[#eff4ff] border border-[#dce9ff] flex items-center justify-center text-[#00236f] font-bold text-[13px] shrink-0">
+                      {prod.codePrefix}
+                    </div>
+                  )}
                   <div className="flex flex-col min-w-0">
                     <span className="font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[14px] text-[#0b1c30] truncate">
                       {prod.name}
@@ -214,9 +308,20 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                 </div>
 
                 <div className="flex flex-col items-end shrink-0">
-                  <span className="font-['Inter',sans-serif] font-bold text-[16px] text-[#0b1c30]">
-                    {formatMoney(prod.priceWholesale)}
-                  </span>
+                  {hasPromoDiscount ? (
+                    <>
+                      <span className="font-['Inter',sans-serif] font-extrabold text-[16px] text-emerald-700">
+                        {formatMoney(effectivePrice)}
+                      </span>
+                      <span className="text-[11px] text-slate-400 line-through">
+                        {formatMoney(prod.priceWholesale)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="font-['Inter',sans-serif] font-bold text-[16px] text-[#0b1c30]">
+                      {formatMoney(prod.priceWholesale)}
+                    </span>
+                  )}
                   <span className="text-[10px] text-[#444651]">x {prod.unitType}</span>
                 </div>
               </div>
@@ -282,8 +387,8 @@ export const CatalogoView: React.FC<CatalogoViewProps> = ({
                   <LocalIcon name="add_shopping_cart" className="w-4.5 h-4.5" />
                   <span>
                     {isClient
-                      ? `Agregar al Pedido (${formatMoney(prod.priceWholesale * qty)})`
-                      : `Agregar a Preventa (${formatMoney(prod.priceWholesale * qty)})`}
+                      ? `Agregar al Pedido (${formatMoney(effectivePrice * qty)})`
+                      : `Agregar a Preventa (${formatMoney(effectivePrice * qty)})`}
                   </span>
                 </button>
               </div>

@@ -8,6 +8,7 @@ interface NewSaleModalProps {
   clients: Client[];
   products: Product[];
   initialClient: Client;
+  cashDiscountPercent?: number;
   onCompleteSale: (order: Order) => void;
 }
 
@@ -17,6 +18,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
   clients,
   products,
   initialClient,
+  cashDiscountPercent = 10,
   onCompleteSale,
 }) => {
   const [selectedClient, setSelectedClient] = useState<Client>(initialClient);
@@ -26,6 +28,11 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
   const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || '');
   const [quantity, setQuantity] = useState<number>(1);
   const [notes, setNotes] = useState<string>('');
+
+  // Descuento o Recargo manual antes de cobrar
+  const [adjustmentType, setAdjustmentType] = useState<'none' | 'descuento' | 'recargo'>('none');
+  const [adjustmentAmount, setAdjustmentAmount] = useState<number>(0);
+  const [adjustmentNotes, setAdjustmentNotes] = useState<string>('');
 
   if (!isOpen) return null;
 
@@ -61,8 +68,24 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
     setBasket(basket.filter((_, i) => i !== index));
   };
 
-  const total = basket.reduce((acc, item) => acc + item.subtotal, 0);
+  // Cálculos detallados con Descuento/Recargo manual + Descuento Contado Efectivo
+  const rawSubtotal = basket.reduce((acc, item) => acc + item.subtotal, 0);
   const totalBultos = basket.reduce((acc, item) => acc + item.quantity, 0);
+
+  const appliedAdjustment = adjustmentType === 'none' ? 0 : Math.max(0, adjustmentAmount);
+  const subtotalAfterAdjustment =
+    adjustmentType === 'descuento'
+      ? Math.max(0, rawSubtotal - appliedAdjustment)
+      : adjustmentType === 'recargo'
+      ? rawSubtotal + appliedAdjustment
+      : rawSubtotal;
+
+  const cashDiscountAmount =
+    paymentMethod === 'efectivo'
+      ? Math.round((subtotalAfterAdjustment * cashDiscountPercent) / 100)
+      : 0;
+
+  const finalTotal = Math.max(0, subtotalAfterAdjustment - cashDiscountAmount);
 
   const formatMoney = (v: number) => '$' + v.toLocaleString('es-AR');
 
@@ -85,7 +108,13 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
       type: saleType,
       status: 'pending_sync',
       items: basket,
-      total: total,
+      total: finalTotal,
+      subtotalOriginal: rawSubtotal,
+      discountAmount: (adjustmentType === 'descuento' ? appliedAdjustment : 0) + cashDiscountAmount,
+      discountPercent: paymentMethod === 'efectivo' ? cashDiscountPercent : 0,
+      customAdjustmentType: adjustmentType,
+      customAdjustmentAmount: appliedAdjustment,
+      customAdjustmentNotes: adjustmentNotes,
       bultosCount: totalBultos,
       paymentMethod: paymentMethod,
       notes: notes || (saleType === 'in_situ' ? 'Venta en el acto' : 'Preventa programada'),
@@ -116,7 +145,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-3.5 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} noValidate className="p-4 space-y-3.5 overflow-y-auto flex-1">
           {/* 1. Client selection */}
           <div>
             <label className="block text-[11px] font-semibold text-[#444651] mb-1">
@@ -193,7 +222,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
               <input
                 type="number"
                 min="1"
-                max="50"
+                step="1"
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                 className="w-16 h-10 px-2 text-center bg-white border border-[#dce9ff] rounded-lg text-[13px] font-bold"
@@ -253,19 +282,97 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
             )}
           </div>
 
-          {/* Total & Payment Method */}
-          <div className="p-3 bg-[#1e3a8a] text-white rounded-xl flex items-center justify-between">
-            <div>
-              <span className="text-[10px] text-[#90a8ff] font-bold uppercase block">
-                Total del Pedido
+          {/* Descuento o Recargo Especial antes de cobrar */}
+          <div className="p-3 bg-[#f8f9ff] rounded-xl border border-[#dce9ff] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#00236f] uppercase tracking-wider">
+                Ajuste Comercial Especial (Opcional)
               </span>
-              <span className="text-[11px] text-[#dce1ff]">
-                {totalBultos} bultos en total
-              </span>
+              {adjustmentType !== 'none' && (
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    adjustmentType === 'descuento'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-amber-100 text-amber-900'
+                  }`}
+                >
+                  {adjustmentType === 'descuento' ? 'Descuento Aplicado' : 'Recargo Aplicado'}
+                </span>
+              )}
             </div>
-            <span className="font-['Plus_Jakarta_Sans',sans-serif] font-black text-[20px]">
-              {formatMoney(total)}
-            </span>
+
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdjustmentType('none');
+                  setAdjustmentAmount(0);
+                }}
+                className={`h-8 rounded-lg text-[11px] font-bold transition-all ${
+                  adjustmentType === 'none'
+                    ? 'bg-[#00236f] text-white shadow-2xs'
+                    : 'bg-white border border-[#cbd5e1] text-[#444651]'
+                }`}
+              >
+                Sin Ajuste
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdjustmentType('descuento')}
+                className={`h-8 rounded-lg text-[11px] font-bold transition-all ${
+                  adjustmentType === 'descuento'
+                    ? 'bg-emerald-700 text-white shadow-2xs'
+                    : 'bg-white border border-[#cbd5e1] text-emerald-800'
+                }`}
+              >
+                - Descuento ($)
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdjustmentType('recargo')}
+                className={`h-8 rounded-lg text-[11px] font-bold transition-all ${
+                  adjustmentType === 'recargo'
+                    ? 'bg-amber-600 text-white shadow-2xs'
+                    : 'bg-white border border-[#cbd5e1] text-amber-900'
+                }`}
+              >
+                + Recargo ($)
+              </button>
+            </div>
+
+            {adjustmentType !== 'none' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <div>
+                  <label className="text-[10px] font-bold text-[#444651] block mb-1">
+                    {adjustmentType === 'descuento' ? 'Monto a Descontar ($):' : 'Monto a Recargar ($):'}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={adjustmentAmount === 0 ? '' : adjustmentAmount}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdjustmentAmount(val === '' ? 0 : Math.max(0, parseFloat(val) || 0));
+                    }}
+                    placeholder="0"
+                    className="w-full h-8 px-2.5 bg-white border border-[#cbd5e1] rounded-lg text-[12px] font-mono font-bold text-[#00236f]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[#444651] block mb-1">
+                    Motivo / Observación del Ajuste:
+                  </label>
+                  <input
+                    type="text"
+                    value={adjustmentNotes}
+                    onChange={(e) => setAdjustmentNotes(e.target.value)}
+                    placeholder="Ej: Bonificación por volumen / Flete"
+                    className="w-full h-8 px-2.5 bg-white border border-[#cbd5e1] rounded-lg text-[12px]"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Payment Method */}
@@ -288,6 +395,55 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
                   {pm === 'cta_cte' ? 'Cta. Cte.' : pm === 'qr' ? 'Cobro QR' : 'Efectivo'}
                 </button>
               ))}
+            </div>
+            {paymentMethod === 'efectivo' && cashDiscountPercent > 0 && (
+              <span className="text-[11px] font-bold text-emerald-700 mt-1 block">
+                ⚡ Bonificación de {cashDiscountPercent}% OFF por pago en efectivo aplicada.
+              </span>
+            )}
+          </div>
+
+          {/* Detailed Price Breakdown */}
+          <div className="p-3 bg-gradient-to-br from-[#00236f] to-[#1e3a8a] text-white rounded-xl space-y-2 shadow-xs">
+            <div className="flex items-center justify-between text-[11px] text-white/80">
+              <span>Subtotal Lista ({totalBultos} bultos):</span>
+              <span className="font-mono font-semibold">{formatMoney(rawSubtotal)}</span>
+            </div>
+
+            {adjustmentType !== 'none' && appliedAdjustment > 0 && (
+              <div className="flex items-center justify-between text-[11px]">
+                <span className={adjustmentType === 'descuento' ? 'text-emerald-300' : 'text-amber-300'}>
+                  {adjustmentType === 'descuento' ? 'Descuento especial pactado:' : 'Recargo especial pactado:'}
+                </span>
+                <span className="font-mono font-bold">
+                  {adjustmentType === 'descuento' ? `-${formatMoney(appliedAdjustment)}` : `+${formatMoney(appliedAdjustment)}`}
+                </span>
+              </div>
+            )}
+
+            {paymentMethod === 'efectivo' && cashDiscountAmount > 0 && (
+              <div className="flex items-center justify-between text-[11px] text-emerald-300">
+                <span>Descuento Contado Efectivo (-{cashDiscountPercent}%):</span>
+                <span className="font-mono font-bold">-{formatMoney(cashDiscountAmount)}</span>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-white/20 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-[#90a8ff] font-bold uppercase block">
+                  Total Final a Cobrar
+                </span>
+                <span className="text-[11px] text-[#dce1ff]">
+                  {paymentMethod === 'cta_cte'
+                    ? 'Se carga a cuenta corriente'
+                    : paymentMethod === 'efectivo'
+                    ? 'Cobro en mano contado'
+                    : 'Transferencia / QR'}
+                </span>
+              </div>
+              <span className="font-['Plus_Jakarta_Sans',sans-serif] font-black text-[22px] text-white">
+                {formatMoney(finalTotal)}
+              </span>
             </div>
           </div>
 

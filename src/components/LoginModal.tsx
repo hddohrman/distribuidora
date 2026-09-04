@@ -23,6 +23,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>('vendedor');
   const [vendorPassword, setVendorPassword] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [clientCodeInput, setClientCodeInput] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -49,6 +50,31 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
+  const handleAdminSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    if (
+      adminPassword.trim() === 'admin' ||
+      adminPassword.trim() === 'distri123' ||
+      adminPassword.trim() === '1234'
+    ) {
+      onLogin({
+        role: 'admin',
+        adminName: 'Administración Central',
+      });
+      setAdminPassword('');
+    } else {
+      setErrorMessage('Contraseña incorrecta. (Prueba con: admin o distri123)');
+    }
+  };
+
+  const handleDirectAdminDemo = () => {
+    onLogin({
+      role: 'admin',
+      adminName: 'Administración Central',
+    });
+  };
+
   const handleClientSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -61,6 +87,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     );
 
     if (found) {
+      if (found.canAccessApp === false) {
+        setErrorMessage(
+          `El cliente "${found.name}" no está habilitado para operar en la App. Solicita la activación a Administración Central.`
+        );
+        return;
+      }
       onLogin({
         role: 'cliente',
         client: found,
@@ -125,7 +157,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <span>
               Sesión actual:{' '}
               <strong>
-                {currentSession.role === 'vendedor'
+                {currentSession.role === 'admin'
+                  ? 'Casa Central / Administración Web'
+                  : currentSession.role === 'vendedor'
                   ? `Vendedor (${currentSession.vendorName})`
                   : `Cliente (${currentSession.client?.name})`}
               </strong>
@@ -139,21 +173,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <label className="block text-[11px] font-bold uppercase tracking-wider text-[#444651] mb-2">
             Tipo de Usuario
           </label>
-          <div className="grid grid-cols-2 gap-2 bg-[#f0f4ff] p-1.5 rounded-xl border border-[#dce9ff]">
+          <div className="grid grid-cols-3 gap-1.5 bg-[#f0f4ff] p-1.5 rounded-xl border border-[#dce9ff]">
             <button
               type="button"
               onClick={() => {
                 setSelectedRole('vendedor');
                 setErrorMessage('');
               }}
-              className={`py-2.5 px-3 rounded-lg text-[13px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              className={`py-2 px-2 rounded-lg text-[11px] sm:text-[12px] font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer text-center ${
                 selectedRole === 'vendedor'
                   ? 'bg-[#00236f] text-white shadow-sm'
                   : 'text-[#444651] hover:text-[#00236f]'
               }`}
             >
-              <LocalIcon name="badge" className="w-4.5 h-4.5" />
-              <span>Vendedor / Preventa</span>
+              <LocalIcon name="badge" className="w-4 h-4" />
+              <span>Vendedor</span>
             </button>
 
             <button
@@ -162,14 +196,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 setSelectedRole('cliente');
                 setErrorMessage('');
               }}
-              className={`py-2.5 px-3 rounded-lg text-[13px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              className={`py-2 px-2 rounded-lg text-[11px] sm:text-[12px] font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer text-center ${
                 selectedRole === 'cliente'
                   ? 'bg-[#00236f] text-white shadow-sm'
                   : 'text-[#444651] hover:text-[#00236f]'
               }`}
             >
-              <LocalIcon name="storefront" className="w-4.5 h-4.5" />
-              <span>Cliente / Comercio</span>
+              <LocalIcon name="storefront" className="w-4 h-4" />
+              <span>Cliente</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRole('admin');
+                setErrorMessage('');
+              }}
+              className={`py-2 px-2 rounded-lg text-[11px] sm:text-[12px] font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer text-center ${
+                selectedRole === 'admin'
+                  ? 'bg-[#00236f] text-white shadow-sm'
+                  : 'text-[#444651] hover:text-[#00236f]'
+              }`}
+            >
+              <LocalIcon name="bar_chart" className="w-4 h-4 text-emerald-400" />
+              <span>Casa Central</span>
             </button>
           </div>
         </div>
@@ -238,6 +288,64 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 >
                   <LocalIcon name="bolt" className="w-4 h-4" />
                   <span>Acceso Rápido Demo (David C. • Preventista)</span>
+                </button>
+              </div>
+            </form>
+          ) : selectedRole === 'admin' ? (
+            /* CASA CENTRAL / WEB ADMIN FORM */
+            <form onSubmit={handleAdminSubmit} className="space-y-3.5">
+              <div className="bg-[#f0fdf4] p-3 rounded-xl border border-[#bbf7d0] space-y-1.5">
+                <div className="flex items-center gap-2 text-[#14532d] font-bold text-[13px]">
+                  <LocalIcon name="bar_chart" className="w-5 h-5 text-emerald-600" />
+                  <span>Portal Web Casa Central & Gestión</span>
+                </div>
+                <p className="text-[12px] text-[#166534]">
+                  Dashboard comercial, rentabilidad y márgenes de ganancia, alta y edición de clientes/productos y difusiones automáticas por WhatsApp.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-[#0b1c30] mb-1">
+                  Contraseña de Administrador
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Ingresa la contraseña de admin..."
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    autoFocus
+                    className="w-full h-11 pl-3 pr-10 bg-[#eff4ff] border border-[#dce9ff] rounded-lg text-[13px] font-medium text-[#0b1c30] focus:ring-2 focus:ring-[#00236f] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-2.5 text-[#444651] hover:text-[#0b1c30] p-1 cursor-pointer"
+                  >
+                    <LocalIcon name={showPassword ? 'close' : 'scan'} className="w-4.5 h-4.5" />
+                  </button>
+                </div>
+                <p className="text-[11px] text-[#757682] mt-1">
+                  Clave administrativa: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold text-[#00236f]">admin</code> o <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold text-[#00236f]">distri123</code>
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <button
+                  type="submit"
+                  className="w-full h-11 bg-[#00236f] hover:bg-[#1e3a8a] text-white font-bold text-[13px] rounded-xl flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
+                >
+                  <LocalIcon name="login" className="w-4.5 h-4.5" />
+                  <span>Ingresar a Casa Central</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDirectAdminDemo}
+                  className="w-full h-9 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-[12px] rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all border border-emerald-200"
+                >
+                  <LocalIcon name="bolt" className="w-4 h-4 text-emerald-600" />
+                  <span>Acceso Rápido Directo (Administrador)</span>
                 </button>
               </div>
             </form>

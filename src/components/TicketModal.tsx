@@ -21,6 +21,19 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     window.print();
   };
 
+  const handleDownloadOrderJson = () => {
+    const jsonString = JSON.stringify(order, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pedido_${order.orderNumber.replace(/[^a-zA-Z0-9_-]/g, '')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
       <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 my-auto">
@@ -171,6 +184,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
         {/* Action Buttons */}
         <div className="p-3 bg-white space-y-2">
+          <button
+            type="button"
+            onClick={handleDownloadOrderJson}
+            className="w-full h-10 bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#166534] font-['Plus_Jakarta_Sans',sans-serif] font-bold text-[12px] rounded-lg flex items-center justify-center gap-2 border border-[#bbf7d0] cursor-pointer transition-all active:scale-98"
+            title="Descargar archivo JSON para adjuntar en WhatsApp"
+          >
+            <LocalIcon name="download" className="w-4.5 h-4.5 text-emerald-700" />
+            <span>Descargar Archivo JSON del Pedido (WhatsApp)</span>
+          </button>
+
           <button
             type="button"
             onClick={() => onSendWhatsApp(order)}
